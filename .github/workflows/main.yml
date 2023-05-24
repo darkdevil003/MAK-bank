@@ -1,1 +1,45 @@
+name: Bank Application CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: dbgdc_docker
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker
+        uses: docker/setup-docker@v1
+
+      - name: Build Docker image
+        run: docker build -t bank-application .
+
+      - name: Publish Docker image
+        run: |
+          echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          docker tag bank-application ${{ secrets.DOCKERHUB_USERNAME }}/bank-application:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/bank-application:latest
+
+      - name: Install Helm
+        run: |
+          curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
+          echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+          sudo apt-get update
+          sudo apt-get install -y helm
+
+      - name: Deploy using Helm
+        run: |
+          helm upgrade --install bank-application ./charts/bank-application \
+            --set image.repository=${{ secrets.DOCKERHUB_USERNAME }}/bank-application \
+            --set image.tag=latest \
+            --set someOtherValue=someOtherData
+
 
