@@ -42,4 +42,3 @@ jobs:
             --set image.tag=latest \
             --set someOtherValue=someOtherData
 
-
